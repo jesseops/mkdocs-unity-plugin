@@ -11,10 +11,9 @@ other plugins.
 Create a parent MkDocs project, checkout other MkDocs projects in the root repo. Add the `unity` plugin to your list
 of installed plugins in the parent projects `mkdocs.yml` and reference the `sites`.
 
-At present, no configuration from the sub-site docs will be respected/handled. I'd like to at least make this work
-nicely with the awesome-pages plugin; I'll need to determine whether to go complex and perform multiple
-rendering iterations or just go simple and assume if a docs repo is being adopted it should only rely on
-configuration from the parent.
+This plugin currently works (on my box) with normal builds as well as live/gh-deploy. With the `awesome-pages` plugin
+installed and activated _after_ `unity`, both normal & _awesome_ nav work. Note: you must define custom navigation in
+the child projects using `.page` or similar files as the child `mkdocs.yml` is not evaluated.
 
 ### Example
 
@@ -30,8 +29,12 @@ pip install git+https://github.com/jesseops/mkdocs-unity-plugin.git
 plugins:
   - search
   - unity:
-      sites:
-        - site1
-        - site2
+    sites:
+      - site1:
+          mountpoint: "sub-path/or-even-nestedhere"
+      - site2:
+          mountpoint: "Site 2"
+            path: "./submodules/site-2"
+      - site3
 ...
 ```

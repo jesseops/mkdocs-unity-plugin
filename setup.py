@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='mkdocs-unity-plugin',
-    version='0.1.0',
+    version='0.2.0',
     description='An MkDocs plugin that unifies multiple MkDocs repositories',
     long_description='',
     keywords='mkdocs python markdown wiki',

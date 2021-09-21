@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from tempfile import mktemp, mkdtemp
 
 from mkdocs.config import config_options, load_config
 from mkdocs.plugins import BasePlugin
@@ -17,6 +18,7 @@ class UnityPlugin(BasePlugin):
     def __init__(self):
         self._sub_sites = {}
         self._extra_watches = []
+        self.tmp_docs_dir = None
 
     @property
     def sub_sites(self):
@@ -29,7 +31,31 @@ class UnityPlugin(BasePlugin):
             v.setdefault('mountpoint', k)
             yield k, v
 
-    def on_files(self, files, config):
+    def on_config(self, config):
+        if not self.tmp_docs_dir:
+            self.tmp_docs_dir = mkdtemp(prefix='mkdocs-unity')
+        tmp_docs_dir = self.tmp_docs_dir
+        parent_docs_dir = os.path.join(tmp_docs_dir, config['site_name'].replace(' ', '-'))
+        if not os.path.isdir(parent_docs_dir):
+            os.symlink(config['docs_dir'], parent_docs_dir)
+
+        for site_name, site_config in self.sub_sites:
+            sub_site_rel_path = site_config.get('path', site_name)
+
+            # Get target mkdocs config
+            sub_config = load_config(os.path.join(config['docs_dir'], os.path.pardir, sub_site_rel_path, 'mkdocs.yml'))
+
+            sub_site_dest_path = os.path.join(parent_docs_dir, site_config['mountpoint'])
+            destination_parent = os.path.realpath(os.path.join(sub_site_dest_path, os.pardir))
+            if not os.path.isdir(destination_parent):
+                os.makedirs(destination_parent)
+            if not os.path.isdir(sub_site_dest_path):
+                os.symlink(sub_config['docs_dir'], sub_site_dest_path)
+
+        config['docs_dir'] = parent_docs_dir
+        return config
+
+    def disabled_on_files(self, files, config):
         initial_docs_dir = config["docs_dir"]
         for site_name, site_config in self.sub_sites:
             sub_site_rel_path = site_config.get('path', site_name)
@@ -53,7 +79,7 @@ class UnityPlugin(BasePlugin):
                 setattr(f, 'src_path', getattr(f, 'src_path').replace('docs/', f"{sub_site_rel_path}/"))
                 files.append(f)
 
-        config["docs_dir"] = initial_docs_dir
+        config["docs_dir"] = os.path.realpath(os.path.join(initial_docs_dir, os.path.pardir))
 
     def on_serve(self, server, config, builder):
         for x in self._extra_watches:

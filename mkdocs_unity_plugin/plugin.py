@@ -1,10 +1,10 @@
-import os
-import json
 import logging
+import os
 
 from mkdocs.config import config_options, load_config, Config
 from mkdocs.plugins import BasePlugin
-from mkdocs.structure.files import get_files, Files, File
+from mkdocs.structure.files import get_files
+from mkdocs.utils import dirname_to_title
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,19 @@ class UnityPlugin(BasePlugin):
                     site = {site: {}}
                 name, config = site.popitem()
                 config.setdefault('path', name)
-                config.setdefault('mountpoint', self._get_site_config(config['path'])['site_name'] or name)
+
+                site_mkdocs_config = self._get_site_config(config['path'])
+
+                config.setdefault('include_in_nav', False)
+                config.setdefault('use_site_name_as_title', False)
+                config.setdefault('mountpoint', site_mkdocs_config.get('site_name', name))
+
                 config['mountpoint'] = config['mountpoint'].replace(' ', '-')
+
+                if config['use_site_name_as_title']:
+                    config['title'] = dirname_to_title(site_mkdocs_config['site_name']).title()
+                else:
+                    config.setdefault('title', dirname_to_title(config['mountpoint']).title())
                 self._sub_sites[name] = config
         return self._sub_sites
 
@@ -44,13 +55,13 @@ class UnityPlugin(BasePlugin):
                 nav[k] = UnityPlugin._fix_nav_entries(v, relpath=relpath)
             return nav
         if isinstance(nav, str):
+            nav = nav.strip()
             if relpath:
                 # awesome-pages plugin support
-                if "..." in nav:
-                    if "|" in nav:
-                        nav = nav.split("|", 1)[-1].split("glob=")[-1].strip()
-                        return os.path.join(f"... | glob={relpath}", nav)
+                if nav == "...":
                     return os.path.join(f"... | glob={relpath}", "**/*.md")
+                if navsplit := nav.split("glob=", 1):
+                    return os.path.join(f"... | glob={relpath}", navsplit[-1])
                 nav = os.path.join(relpath, nav)
             return nav
         return nav
@@ -59,10 +70,10 @@ class UnityPlugin(BasePlugin):
         if config['nav']:
             for site, site_config in self.sub_sites.items():
                 site_mkdocs_config = self._get_site_config(site_config['path'])
-                if site_mkdocs_config['nav']:
+                if site_config['include_in_nav'] is True and site_mkdocs_config['nav']:
                     config['nav'].append(
-                        {site_config['mountpoint']: self._fix_nav_entries(site_mkdocs_config['nav'],
-                                                                          site_config['path'])})
+                        {site_config['title']: self._fix_nav_entries(site_mkdocs_config['nav'],
+                                                                     site_config['path'])})
         return config
 
     def on_files(self, files, config):
@@ -78,6 +89,7 @@ class UnityPlugin(BasePlugin):
             config["docs_dir"] = os.path.join(sub_config["docs_dir"], os.path.pardir)
 
             self._extra_watches.append(sub_config["docs_dir"])
+            self._extra_watches.append(sub_config.config_file_path)
             sub_site_files = get_files(config)
 
             # Remove files that aren't in sub_config["docs_dir"] and fix destination/URL pathing

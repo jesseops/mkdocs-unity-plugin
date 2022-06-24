@@ -1,1 +1,4 @@
 site_name: Docs C
+nav:
+  - Pages:
+      - ... | glob=subsection1/page.md

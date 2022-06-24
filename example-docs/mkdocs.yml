@@ -5,6 +5,8 @@ plugins:
       - subsite-a
       - siteb:
           path: subsite-b
+          use_site_name_as_title: true
+          include_in_nav: true
       - subsite-c:
           mountpoint: mounted-at-c
   - awesome-pages:
@@ -13,7 +15,6 @@ plugins:
 
 nav:
   - "Start Here (root)": "index.md"
-  - ...
   - "Nesting":
     - "subsite-b/index.md"
     - "subsite-c/subsection-1/page.md"

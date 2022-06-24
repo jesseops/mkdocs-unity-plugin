@@ -11,20 +11,17 @@ setup(
     author='Jesse Roberts',
     author_email='jesse@jesseops.net',
     license='MIT',
-    python_requires='>=3.6',
+    python_requires='>=3.9',
     install_requires=[
         'mkdocs>=1'
     ],
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 1 - Development/Alpha',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
     packages=find_packages(exclude=['*.tests', '*.tests.*']),

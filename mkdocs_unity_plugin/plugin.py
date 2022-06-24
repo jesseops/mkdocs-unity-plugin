@@ -2,7 +2,7 @@ import os
 import json
 import logging
 
-from mkdocs.config import config_options, load_config
+from mkdocs.config import config_options, load_config, Config
 from mkdocs.plugins import BasePlugin
 from mkdocs.structure.files import get_files, Files, File
 
@@ -21,22 +21,53 @@ class UnityPlugin(BasePlugin):
     @property
     def sub_sites(self):
         if not self._sub_sites:
-            for sub_site in self.config["sites"]:
-                if not isinstance(sub_site, dict):
-                    sub_site = {sub_site: {}}
-                self._sub_sites.update(**sub_site)
-        for k, v in self._sub_sites.items():
-            v.setdefault('mountpoint', k)
-            yield k, v
+            for site in self.config["sites"]:
+                if not isinstance(site, dict):
+                    site = {site: {}}
+                name, config = site.popitem()
+                config.setdefault('path', name)
+                config.setdefault('mountpoint', self._get_site_config(config['path'])['site_name'] or name)
+                config['mountpoint'] = config['mountpoint'].replace(' ', '-')
+                self._sub_sites[name] = config
+        return self._sub_sites
+
+    def _get_site_config(self, site_path: str):
+        global_config = load_config(self.config.config_file_path)
+        return load_config(os.path.join(global_config['docs_dir'], os.path.pardir, site_path, 'mkdocs.yml'))
+
+    @staticmethod
+    def _fix_nav_entries(nav, relpath=''):
+        if isinstance(nav, list):
+            return [UnityPlugin._fix_nav_entries(x, relpath=relpath) for x in nav]
+        if isinstance(nav, dict):
+            for k, v in nav.items():
+                nav[k] = UnityPlugin._fix_nav_entries(v, relpath=relpath)
+            return nav
+        if isinstance(nav, str):
+            if relpath:
+                nav = f"{relpath}/{nav}"
+            return nav
+        return nav
+
+    def on_config(self, config: Config):
+        if config['nav']:
+            for site, site_config in self.sub_sites.items():
+                site_mkdocs_config = self._get_site_config(site_config['path'])
+                if site_mkdocs_config['nav']:
+                    config['nav'].append(
+                        {site_config['mountpoint']: self._fix_nav_entries(site_mkdocs_config['nav'],
+                                                                          site_config['path'])})
+                logger.info(f"Got sub-site mkdocs at {site_mkdocs_config}")
+        return config
 
     def on_files(self, files, config):
         initial_docs_dir = config["docs_dir"]
-        for site_name, site_config in self.sub_sites:
+        for site_name, site_config in self.sub_sites.items():
             sub_site_rel_path = site_config.get('path', site_name)
             sub_site_dest_path = site_config['mountpoint']
 
             # Get target mkdocs config
-            sub_config = load_config(os.path.join(initial_docs_dir, os.path.pardir, sub_site_rel_path, 'mkdocs.yml'))
+            sub_config = self._get_site_config(site_config['path'])
 
             # Update global config with sub_site docs_dir
             config["docs_dir"] = os.path.join(sub_config["docs_dir"], os.path.pardir)

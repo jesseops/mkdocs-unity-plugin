@@ -1,3 +1,5 @@
 site_name: site_name A
 nav:
   - AAaaA: index.md
+  - Pages:
+      - ... | glob=subsection*/page.md

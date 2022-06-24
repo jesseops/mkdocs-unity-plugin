@@ -7,12 +7,14 @@ plugins:
           path: subsite-b
       - subsite-c:
           mountpoint: mounted-at-c
-  #- awesome-pages:
-  #    filename: .nav
+  - awesome-pages:
+      filename: .nav
   - search
 
 nav:
   - "Start Here (root)": "index.md"
+  - ...
   - "Nesting":
     - "subsite-b/index.md"
     - "subsite-c/subsection-1/page.md"
+    - ... | glob=subsite-c/**/*.md

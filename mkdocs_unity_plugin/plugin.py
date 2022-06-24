@@ -45,7 +45,13 @@ class UnityPlugin(BasePlugin):
             return nav
         if isinstance(nav, str):
             if relpath:
-                nav = f"{relpath}/{nav}"
+                # awesome-pages plugin support
+                if "..." in nav:
+                    if "|" in nav:
+                        nav = nav.split("|", 1)[-1].split("glob=")[-1].strip()
+                        return os.path.join(f"... | glob={relpath}", nav)
+                    return os.path.join(f"... | glob={relpath}", "**/*.md")
+                nav = os.path.join(relpath, nav)
             return nav
         return nav
 
@@ -57,7 +63,6 @@ class UnityPlugin(BasePlugin):
                     config['nav'].append(
                         {site_config['mountpoint']: self._fix_nav_entries(site_mkdocs_config['nav'],
                                                                           site_config['path'])})
-                logger.info(f"Got sub-site mkdocs at {site_mkdocs_config}")
         return config
 
     def on_files(self, files, config):
